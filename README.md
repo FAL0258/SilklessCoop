@@ -48,12 +48,13 @@ Download SilklessCoopVisual.zip from the [nexusmods](https://www.nexusmods.com/h
 - Shows connected players' animations
 - Shows connected players' compasses on the map
 - Shows the amount of connected players in the bottom left corner when viewing the quick map
+- Player other players' sounds (experimental - developed by p11necone)
 
 ## What's Next
 
 - Bugfixes
-- Sync sounds
 - Sync other things (spoilers)
+- Show player names
 - Arrow to offscreen players
 
 Syncing enemies is hard and will be (if at all) worked on in a separate mod in the future.
@@ -68,6 +69,7 @@ Only major changes listed.
 - 2.2 - Added connection UI
 - 2.4 - Improved animations
 - 2.5 - Split into 2 repos
+- 2.6 - Added audio sync
 
 ## License
 

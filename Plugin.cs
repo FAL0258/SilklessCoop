@@ -66,6 +66,7 @@ public class Plugin : BaseUnityPlugin
         gameObject.AddComponent<HornetVisualSync>();
         gameObject.AddComponent<CompassSync>();
         gameObject.AddComponent<PlayerCountSync>();
+        if (ModConfig.SyncSound) gameObject.AddComponent<AudioSync>();
     }
 
     private void OnDestroy()

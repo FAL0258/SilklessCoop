@@ -64,7 +64,7 @@ public class PopupManager : MonoBehaviour
             });
         } catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
 }

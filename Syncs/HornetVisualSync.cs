@@ -5,7 +5,6 @@ using SilklessCoopVisual.Components;
 using SilklessLib;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Serialization;
 
 namespace SilklessCoopVisual.Syncs;
 
@@ -81,7 +80,7 @@ public class HornetVisualSync : Sync
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
 
@@ -102,7 +101,7 @@ public class HornetVisualSync : Sync
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
 
@@ -125,7 +124,7 @@ public class HornetVisualSync : Sync
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
     private void OnHornetPositionPacket(HornetPositionPacket packet)
@@ -175,7 +174,7 @@ public class HornetVisualSync : Sync
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
     
@@ -200,7 +199,7 @@ public class HornetVisualSync : Sync
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
 }
@@ -232,7 +231,7 @@ public class HornetAnimationPatch
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
 }

@@ -51,7 +51,7 @@ public class UIAdder : MonoBehaviour
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
 }

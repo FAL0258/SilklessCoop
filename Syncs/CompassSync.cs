@@ -58,7 +58,7 @@ public class CompassSync : Sync
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
 
@@ -76,7 +76,7 @@ public class CompassSync : Sync
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
     
@@ -98,7 +98,7 @@ public class CompassSync : Sync
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
     private void OnCompassPositionPacket(CompassPositionPacket packet)
@@ -125,7 +125,7 @@ public class CompassSync : Sync
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
 }

@@ -48,7 +48,7 @@ public class PlayerCountSync : Sync
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
     
@@ -89,7 +89,7 @@ public class PlayerCountSync : Sync
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
 
@@ -101,7 +101,7 @@ public class PlayerCountSync : Sync
         }
         catch (Exception e)
         {
-            LogUtil.LogError(e.ToString());
+            LogUtil.LogError(e);
         }
     }
 }

@@ -31,12 +31,12 @@
             <HintPath>$(SILKSONG_PATH)/Hollow Knight Silksong_Data/Managed/Assembly-CSharp.dll</HintPath>
         </Reference>
 
-        <Reference Include="UnityEngine.UI">
-            <HintPath>$(SILKSONG_PATH)/Hollow Knight Silksong_Data/Managed/UnityEngine.UI.dll</HintPath>
+        <Reference Include="Playmaker">
+            <HintPath>$(SILKSONG_PATH)/Hollow Knight Silksong_Data/Managed/Playmaker.dll</HintPath>
         </Reference>
 
-        <Reference Include="com.rlabrecque.steamworks.net">
-            <HintPath>$(SILKSONG_PATH)/Hollow Knight Silksong_Data/Managed/com.rlabrecque.steamworks.net.dll</HintPath>
+        <Reference Include="UnityEngine.UI">
+            <HintPath>$(SILKSONG_PATH)/Hollow Knight Silksong_Data/Managed/UnityEngine.UI.dll</HintPath>
         </Reference>
 
         <ProjectReference Include="../SilklessLib/SilklessLib.csproj" />

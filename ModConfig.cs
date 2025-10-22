@@ -28,8 +28,8 @@ public static class ModConfig
         MultiplayerToggleKey = config.Bind("General", "Toggle Key", KeyCode.F5, "Key used to toggle multiplayer.").Value;
         PopupTimeout = config.Bind("General", "Popup Timeout", 5.0f, "Time until popup messages hide (set this to 0 to disable popups).").Value;
         
-        SyncSound = config.Bind("Audio", "Sync Audio", true, "Enable sound sync (experimental).").Value;
-        SyncParticles = config.Bind("Audio", "Sync Particles", true, "Enable particle sync (experimental).").Value;
+        SyncSound = config.Bind("Audio", "Sync Audio", false, "Enable sound sync (experimental).").Value;
+        SyncParticles = config.Bind("Audio", "Sync Particles", false, "Enable particle sync (experimental).").Value;
         AudioRolloff = Mathf.Clamp(config.Bind("Audio", "Audio distance rolloff", 50, "How quickly a sound gets quieter depending on distance").Value, 0, Mathf.Infinity);
         
         Version = MyPluginInfo.PLUGIN_VERSION;

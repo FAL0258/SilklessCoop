@@ -74,18 +74,26 @@ internal class AudioSync : Sync
      *      We can just send the name of the table, the volume, pitch, and position and just play our own copy of it at that position
      *      Hopefully I can sync the exact clip instead of it being separately, but I haven't found a way yet
      */
-    
+
     // Data
     private HornetVisualSync _visualSync;
-    
+
     // The audio controller for each player (Excluding own clients)
     private readonly Dictionary<string, HeroAudioController> _playerAudioControllers = new();
     // Stores the data for while players are currently dashing, used in PreFunc() and PostFunc()
     private readonly Dictionary<string, bool> _playersDashing = new();
     // This is the previous animation frame for each players animator, used to make sure frame events aren't called twice
     private readonly Dictionary<string, int> _previousFrame = new();
+
+    //Store key and audioSource in list
+    private class AdditionSoundPlaying
+    {
+        public AudioSource Source;
+        public string Key;
+    }
+
     // A list of every extra sound that's playing, used to adjust volume and panning based on distance
-    private static readonly List<AudioSource> AdditionalSoundsPlaying = new();
+    private static readonly List<AdditionSoundPlaying> AdditionalSoundsPlaying = new();
 
     // Memory for PreFunc() and PostFunc()
     private bool _previouslyDashing;
@@ -112,7 +120,7 @@ internal class AudioSync : Sync
         SilklessAPI.AddHandler<AudioAllowFootstepsGracePacket>(OnAudioAllowFootstepsGracePacket);
         SilklessAPI.AddHandler<AudioResetPitchPacket>(OnAudioResetPitchPacket);
         SilklessAPI.AddHandler<AudioFadeInVolumePacket>(OnAudioFadeInVolumePacket);
-        SilklessAPI.AddHandler<AudioSoftLandingPacket>(OnAudioSoftLandingPacket); 
+        SilklessAPI.AddHandler<AudioSoftLandingPacket>(OnAudioSoftLandingPacket);
         SilklessAPI.AddHandler<AudioPlaySoundFromTablePacket>(OnAudioPlaySoundFromTablePacket);
         SilklessAPI.AddHandler<AudioMantlePacket>(OnAudioMantlePacket);
         SilklessAPI.AddHandler<AudioUmbrellaInflatePacket>(OnAudioUmbrellaInflatePacket);
@@ -182,12 +190,12 @@ internal class AudioSync : Sync
                 HeroController.instance.OnDoubleJumped += SendAudioDoubleJumpPacket;
                 _tryHookDoubleJump = false;
             }
-            if(_tryUnhookDoubleJump)
+            if (_tryUnhookDoubleJump)
             {
                 HeroController.instance.OnDoubleJumped -= SendAudioDoubleJumpPacket;
                 _tryUnhookDoubleJump = false;
             }
-            if(_tryRunOnConnect)
+            if (_tryRunOnConnect)
             {
                 OnConnect();
                 _tryRunOnConnect = false;
@@ -239,7 +247,7 @@ internal class AudioSync : Sync
                 Dash
                 
                  */
-                if(!PreFunc(key)) return;
+                if (!PreFunc(key)) return;
                 // ReSharper disable once InconsistentNaming
                 HeroAudioController HAC = _playerAudioControllers[key];
 
@@ -294,13 +302,14 @@ internal class AudioSync : Sync
                 PostFunc(key);
             }
             SetVolumes();
-        } catch (Exception e) { LogUtil.LogError(e); }
-       
+        }
+        catch (Exception e) { LogUtil.LogError(e); }
+
     }
 
     protected override void Tick()
     {
-        
+
     }
 
     protected override void OnPlayerJoin(string id)
@@ -315,6 +324,7 @@ internal class AudioSync : Sync
         if (_playerAudioControllers.Remove(id, out HeroAudioController HAC) && HAC) Destroy(HAC);
         _playersDashing.Remove(id);
         _previousFrame.Remove(id);
+        AdditionalSoundsPlaying.RemoveAll(s => s.Key == id);
     }
 
     protected override void Reset()
@@ -325,6 +335,7 @@ internal class AudioSync : Sync
             _playerAudioControllers.Clear();
             _playersDashing.Clear();
             _previousFrame.Clear();
+            AdditionalSoundsPlaying.Clear();
         }
         catch (Exception e)
         {
@@ -334,44 +345,82 @@ internal class AudioSync : Sync
 
     private void OnAudioPlaySoundPacket(AudioPlaySoundPacket packet)
     {
-        if(!PreFunc(packet.ID)) return;
-        _playerAudioControllers[packet.ID].PlaySound((HeroSounds)packet.HeroSound, packet.PlayVibration);
-        PostFunc(packet.ID);
+        try
+        {
+            if (!_visualSync.PlayerObjects[packet.ID].activeSelf) return;
+            if (!PreFunc(packet.ID)) return;
+            _playerAudioControllers[packet.ID].PlaySound((HeroSounds)packet.HeroSound, packet.PlayVibration);
+            PostFunc(packet.ID);
+        }
+        catch (Exception e)
+        {
+            LogUtil.LogError(e);
+        }
     }
 
     private void OnAudioStopSoundPacket(AudioStopSoundPacket packet)
     {
-        if(!PreFunc(packet.ID)) return;
-        _playerAudioControllers[packet.ID].StopSound((HeroSounds)packet.HeroSound, packet.ResetStarts);
-        PostFunc(packet.ID);
+        try
+        {
+            if (!_visualSync.PlayerObjects[packet.ID].activeSelf) return;
+            if ((HeroSounds)packet.HeroSound == HeroSounds.FALLING) return;
+            if (!PreFunc(packet.ID)) return;
+            _playerAudioControllers[packet.ID].StopSound((HeroSounds)packet.HeroSound, packet.ResetStarts);
+            PostFunc(packet.ID);
+        }
+        catch (Exception e)
+        {
+            LogUtil.LogError(e);
+        }
     }
 
     private void OnAudioStopAllSoundsPacket(AudioStopAllSoundsPacket packet)
     {
-        if(!PreFunc(packet.ID)) return;
-        _playerAudioControllers[packet.ID].StopAllSounds();
-        PostFunc(packet.ID);
+        try
+        {
+            if (!PreFunc(packet.ID)) return;
+            _playerAudioControllers[packet.ID].StopAllSounds();
+            PostFunc(packet.ID);
+        }
+        catch (Exception e)
+        {
+            LogUtil.LogError(e);
+        }
     }
 
     private void OnAudioPauseAllSoundsPacket(AudioPauseAllSoundsPacket packet)
     {
-        if(!PreFunc(packet.ID)) return;
-        _playerAudioControllers[packet.ID].PauseAllSounds();
-        PostFunc(packet.ID);
+        try
+        {
+            if (!PreFunc(packet.ID)) return;
+            _playerAudioControllers[packet.ID].PauseAllSounds();
+            PostFunc(packet.ID);
+        }
+        catch (Exception e)
+        {
+            LogUtil.LogError(e);
+        }
     }
 
     private void OnAudioUnPauseAllSoundsPacket(AudioUnPauseAllSoundsPacket packet)
     {
-        if(!PreFunc(packet.ID)) return;
-        _playerAudioControllers[packet.ID].UnPauseAllSounds();
-        PostFunc(packet.ID);
+        try
+        {
+            if (!PreFunc(packet.ID)) return;
+            _playerAudioControllers[packet.ID].UnPauseAllSounds();
+            PostFunc(packet.ID);
+        }
+        catch (Exception e)
+        {
+            LogUtil.LogError(e);
+        }
     }
 
     private void OnAudioSetFootstepsTablePacket(AudioSetFootstepsTablePacket packet)
     {
         try
         {
-            if(!PreFunc(packet.ID)) return;
+            if (!PreFunc(packet.ID)) return;
 
             // Use reflection to find a list of every footstep table (stored in HeroController class)
             var type = HeroController.instance.GetType();
@@ -397,60 +446,69 @@ internal class AudioSync : Sync
 
     private void OnAudioAllowFootstepsGracePacket(AudioAllowFootstepsGracePacket packet)
     {
-        // Whenever a player dashes, it disables footstep noises for a little bit
-        if(!PreFunc(packet.ID)) return;
-        _playerAudioControllers[packet.ID].AllowFootstepsGrace();
-        PostFunc(packet.ID);
+        try
+        {
+            // Whenever a player dashes, it disables footstep noises for a little bit
+            if (!PreFunc(packet.ID)) return;
+            _playerAudioControllers[packet.ID].AllowFootstepsGrace();
+            PostFunc(packet.ID);
+        } catch(Exception e) { LogUtil.LogError(e);}
     }
 
     private void OnAudioResetPitchPacket(AudioResetPitchPacket packet)
     {
-        if(!PreFunc(packet.ID)) return;
+        if (!PreFunc(packet.ID)) return;
         // Useless imo - maybe add later support?
         PostFunc(packet.ID);
     }
 
     private void OnAudioFadeInVolumePacket(AudioFadeInVolumePacket packet)
     {
-        if(!PreFunc(packet.ID)) return;
+        if (!PreFunc(packet.ID)) return;
         PostFunc(packet.ID);
         // Useless imo - maybe add later support? Also, untested (cut out) (used for falling sound)
     }
 
     private void OnAudioSoftLandingPacket(AudioSoftLandingPacket packet)
     {
-        // The environment type in the PlayerData.instance is used to decide which SoftLanding
-        if(!PreFunc(packet.ID)) return;
-        // Store the old "environment type" so we can set it back
-        EnvironmentTypes oldType = PlayerData.instance.environmentType;
-        PlayerData.instance.environmentType = (EnvironmentTypes)packet.EnvironmentType;
-        Vector3 pos = new Vector3(packet.PositionX, packet.PositionY, 0.03f);
-        // Spawn the prefab (stored in HeroController class) at the right position
-        GameObject softL = HeroController.instance.softLandingEffectPrefab.Spawn(pos);
-
-        // Sometimes bugs out volume, disable it
-        softL.GetComponent<AudioSourcePriority>().enabled = false;
-        // Destroy particles
-        if(!ModConfig.SyncParticles)
+        try
         {
-            foreach(ParticleSystem t in softL.GetComponentsInChildren<ParticleSystem>())
+            // The environment type in the PlayerData.instance is used to decide which SoftLanding
+            if (!PreFunc(packet.ID)) return;
+            // Store the old "environment type" so we can set it back
+            EnvironmentTypes oldType = PlayerData.instance.environmentType;
+            PlayerData.instance.environmentType = (EnvironmentTypes)packet.EnvironmentType;
+            Vector3 pos = new Vector3(packet.PositionX, packet.PositionY, 0.03f);
+            // Spawn the prefab (stored in HeroController class) at the right position
+            GameObject softL = HeroController.instance.softLandingEffectPrefab.Spawn(pos);
+
+            // Sometimes bugs out volume, disable it
+            softL.GetComponent<AudioSourcePriority>().enabled = false;
+            // Destroy particles
+            if (!ModConfig.SyncParticles)
             {
-                t.Stop();
+                foreach (ParticleSystem t in softL.GetComponentsInChildren<ParticleSystem>())
+                {
+                    t.Stop();
+                }
+                foreach (SpriteRenderer t in softL.GetComponentsInChildren<SpriteRenderer>())
+                {
+                    t.enabled = false;
+                }
             }
-            foreach (SpriteRenderer t in softL.GetComponentsInChildren<SpriteRenderer>())
-            {
-                t.enabled = false;
-            }
+            // Add to additionSounds list and set back the PlayerData environment type
+            AdditionalSoundsPlaying.Add(new AdditionSoundPlaying { Source = softL.GetComponent<AudioSource>(), Key = packet.ID});
+            PlayerData.instance.environmentType = oldType;
+            PostFunc(packet.ID);
         }
-        // Add to additionSounds list and set back the PlayerData environment type
-        AdditionalSoundsPlaying.Add(softL.GetComponent<AudioSource>());
-        PlayerData.instance.environmentType = oldType;
-        PostFunc(packet.ID);
+        catch (Exception e) { LogUtil.LogError(e); }
     }
 
     private void OnAudioPlaySoundFromTablePacket(AudioPlaySoundFromTablePacket packet)
     {
-        if(!PreFunc(packet.ID)) return;
+        if (packet.TableName == null) return;
+        if (packet.ID == null) return;
+        if (!PreFunc(packet.ID)) return;
         try
         {
             // Use the correct table based on the name
@@ -458,46 +516,56 @@ internal class AudioSync : Sync
             switch (packet.TableName)
             {
                 case "Attack Normal Hornet Voice":
+                    if(HeroController.instance.attackAudioTable == null) { PostFunc(packet.ID); return; }
                     table = HeroController.instance.attackAudioTable;
                     break;
 
                 case "warrior_rage_attack":
+                    if (HeroController.instance.warriorRageAttackAudioTable == null) { PostFunc(packet.ID); return; }
                     table = HeroController.instance.warriorRageAttackAudioTable;
                     break;
 
                 case "hornet_projectile_twang Quick Sling":
+                    if (HeroController.instance.quickSlingAudioTable == null) { PostFunc(packet.ID); return; }
                     table = HeroController.instance.quickSlingAudioTable;
                     break;
 
                 case "Wound Hornet Voice":
+                    if (HeroController.instance.woundAudioTable == null) { PostFunc(packet.ID); return; }
                     table = HeroController.instance.woundAudioTable;
                     break;
 
                 case "hornet_wound_heavy":
+                    if (HeroController.instance.woundHeavyAudioTable == null) { PostFunc(packet.ID); return; }
                     table = HeroController.instance.woundHeavyAudioTable;
                     break;
 
                 case "Frost Damage Hornet Voice":
+                    if (HeroController.instance.woundFrostAudioTable == null) { PostFunc(packet.ID); return; }
                     table = HeroController.instance.woundFrostAudioTable;
                     break;
 
                 case "Hazard Damage Hornet Voice":
+                    if (HeroController.instance.hazardDamageAudioTable == null) { PostFunc(packet.ID); return; }
                     table = HeroController.instance.hazardDamageAudioTable;
                     break;
 
                 case "Pit Fall":
+                    if (HeroController.instance.pitFallAudioTable == null) { PostFunc(packet.ID); return; }
                     table = HeroController.instance.pitFallAudioTable;
                     break;
 
                 case "Death Hornet Voice":
+                    if (HeroController.instance.deathAudioTable == null) { PostFunc(packet.ID); return; }
                     table = HeroController.instance.deathAudioTable;
                     break;
 
                 case "Grunt Hornet Voice":
+                    if (HeroController.instance.gruntAudioTable == null) { PostFunc(packet.ID); return; }
                     table = HeroController.instance.gruntAudioTable;
                     break;
                 // case "Taunt Hornet Voice":
-                    // table = "\\Assets\\Audio\\Voices\\Hornet_Silksong";
+                // table = "\\Assets\\Audio\\Voices\\Hornet_Silksong";
                 default:
                     // Exit the function if no table was found (Call PostFunc() always)
                     PostFunc(packet.ID);
@@ -511,11 +579,15 @@ internal class AudioSync : Sync
                 return;
             }
             // Spawn table with already made function, then set pitch and volume to match other one
-            AudioSource output;
-            // Use odd Z position as a key to not send packet for the newly spawned sound (gets stuck in loop)
-            AdditionalSoundsPlaying.Add(output = table.SpawnAndPlayOneShot(new Vector3(packet.PositionX, packet.PositionY, 0.0405f), true));
-            output.pitch = packet.Pitch;
+            AudioSource output = table.SpawnAndPlayOneShot(new Vector3(packet.PositionX, packet.PositionY, 0.0405f), true);
+            if (output == null)
+            {
+                PostFunc(packet.ID);
+                return;
+            }
+            AdditionalSoundsPlaying.Add(new AdditionSoundPlaying { Source = output, Key = packet.ID });
             output.volume = packet.Volume;
+            output.pitch = packet.Pitch;
             // Add to additional sounds list
         }
         catch (Exception e) { LogUtil.LogError(e); }
@@ -524,68 +596,80 @@ internal class AudioSync : Sync
 
     private void OnAudioMantlePacket(AudioMantlePacket packet)
     {
-        if (!PreFunc(packet.ID)) return;
-        // Mantle sounds are stored in a weird place
-        var fsm = HeroController.instance.mantleFSM;
-
-        var state = fsm.FsmStates[5];
-
-        var actionData = state.ActionData;
-
-        // Use reflection on MantleFSM
-        FieldInfo field = actionData.GetType().GetField("unityObjectParams", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        if (field != null)
+        try
         {
-            List<UnityEngine.Object> unityObjects = (List<UnityEngine.Object>) field.GetValue(actionData);
-            if (unityObjects != null)
+            if (!PreFunc(packet.ID)) return;
+            // Mantle sounds are stored in a weird place
+            var fsm = HeroController.instance.mantleFSM;
+
+            var state = fsm.FsmStates[5];
+
+            var actionData = state.ActionData;
+
+            // Use reflection on MantleFSM
+            FieldInfo field = actionData.GetType().GetField("unityObjectParams", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            if (field != null)
             {
-                // Choose a random clip out of 4
-                AudioClip clip = (AudioClip)unityObjects[UnityEngine.Random.Range(0, 3)];
-                // Instantiate and play clip (position at pos of player who sent it)
-                AudioSource audioSource = new GameObject().AddComponent<AudioSource>();
-                audioSource.volume = 1;
-                audioSource.pitch = 1;
-                audioSource.transform.position = _visualSync.PlayerObjects[packet.ID].transform.position;
-                audioSource.PlayOneShot(clip);
-                AdditionalSoundsPlaying.Add(audioSource);
-                Destroy(audioSource.gameObject, 3);
+                List<UnityEngine.Object> unityObjects = (List<UnityEngine.Object>)field.GetValue(actionData);
+                if (unityObjects != null)
+                {
+                    // Choose a random clip out of 4
+                    AudioClip clip = (AudioClip)unityObjects[UnityEngine.Random.Range(0, 3)];
+                    // Instantiate and play clip (position at pos of player who sent it)
+                    AudioSource audioSource = new GameObject().AddComponent<AudioSource>();
+                    audioSource.volume = 1;
+                    audioSource.pitch = 1;
+                    audioSource.transform.position = _visualSync.PlayerObjects[packet.ID].transform.position;
+                    audioSource.PlayOneShot(clip);
+                    AdditionalSoundsPlaying.Add(new AdditionSoundPlaying { Source = audioSource, Key = packet.ID});
+                    Destroy(audioSource.gameObject, 3);
+                }
             }
+            PostFunc(packet.ID);
         }
-        PostFunc(packet.ID);
+        catch (Exception e) { LogUtil.LogError(e); }
     }
 
     private void OnAudioUmbrellaInflatePacket(AudioUmbrellaInflatePacket packet)
     {
-        if (!PreFunc(packet.ID)) return;
-        // Umbrella sounds are stored in a weird place
-        // ReSharper disable once InconsistentNaming
-        PlayAudioEvent PAE = (PlayAudioEvent)HeroController.instance.umbrellaFSM.FsmStates[5].Actions[9];
-        AudioClip clip = PAE.audioClip.Value as AudioClip;
-        // Instantiate and play clip (position at pos of player who sent it)
-        AudioSource audioSource = new GameObject().AddComponent<AudioSource>();
-        audioSource.volume = 1;
-        audioSource.pitch = 1;
-        audioSource.transform.position = _visualSync.PlayerObjects[packet.ID].transform.position;
-        audioSource.PlayOneShot(clip);
-        AdditionalSoundsPlaying.Add(audioSource);
-        Destroy(audioSource.gameObject, 3);
-        PostFunc(packet.ID);
+        try
+        {
+            if (!PreFunc(packet.ID)) return;
+            // Umbrella sounds are stored in a weird place
+            // ReSharper disable once InconsistentNaming
+            PlayAudioEvent PAE = (PlayAudioEvent)HeroController.instance.umbrellaFSM.FsmStates[5].Actions[9];
+            AudioClip clip = PAE.audioClip.Value as AudioClip;
+            // Instantiate and play clip (position at pos of player who sent it)
+            AudioSource audioSource = new GameObject().AddComponent<AudioSource>();
+            audioSource.volume = 1;
+            audioSource.pitch = 1;
+            audioSource.transform.position = _visualSync.PlayerObjects[packet.ID].transform.position;
+            audioSource.PlayOneShot(clip);
+            AdditionalSoundsPlaying.Add(new AdditionSoundPlaying { Source = audioSource, Key = packet.ID });
+            Destroy(audioSource.gameObject, 3);
+            PostFunc(packet.ID);
+        }
+        catch (Exception e) { LogUtil.LogError(e); }
     }
 
     private void OnAudioDoubleJumpPacket(AudioDoubleJumpPacket packet)
     {
-        if (!PreFunc(packet.ID)) return;
-        AudioClip clip = HeroController.instance.doubleJumpClip;
-        // Instantiate and play clip (position at pos of player who sent it)
-        AudioSource audioSource = new GameObject().AddComponent<AudioSource>();
-        audioSource.volume = 1;
-        audioSource.pitch = 1;
-        audioSource.transform.position = _visualSync.PlayerObjects[packet.ID].transform.position;
-        audioSource.PlayOneShot(clip);
-        AdditionalSoundsPlaying.Add(audioSource);
-        Destroy(audioSource.gameObject, 3);
-        PostFunc(packet.ID);
+        try
+        {
+            if (!PreFunc(packet.ID)) return;
+            AudioClip clip = HeroController.instance.doubleJumpClip;
+            // Instantiate and play clip (position at pos of player who sent it)
+            AudioSource audioSource = new GameObject().AddComponent<AudioSource>();
+            audioSource.volume = 1;
+            audioSource.pitch = 1;
+            audioSource.transform.position = _visualSync.PlayerObjects[packet.ID].transform.position;
+            audioSource.PlayOneShot(clip);
+            AdditionalSoundsPlaying.Add(new AdditionSoundPlaying { Source = audioSource, Key = packet.ID });
+            Destroy(audioSource.gameObject, 3);
+            PostFunc(packet.ID);
+        }
+        catch(Exception e) { LogUtil.LogError(e); }
     }
 
     private void SendAudioDoubleJumpPacket() => SilklessAPI.SendPacket(new AudioDoubleJumpPacket());
@@ -618,7 +702,7 @@ internal class AudioSync : Sync
     public bool PreFunc(string player)
     {
         if (!_visualSync) return false;
-        if(_visualSync.cachedHornetObject == null)
+        if (_visualSync.cachedHornetObject == null)
         {
             return false;
         }
@@ -633,7 +717,8 @@ internal class AudioSync : Sync
         // Bunch of variables that affect sounds played, temporarily set them to the other clients (reverted in post func)
         _previouslyDashing = HeroController.instance.cState.dashing;
         if (_playersDashing.TryGetValue(player, out bool isDashing)) HeroController.instance.cState.dashing = isDashing;
-        else { 
+        else
+        {
             _playersDashing.Add(player, false);
             HeroController.instance.cState.dashing = false;
         }
@@ -659,7 +744,7 @@ internal class AudioSync : Sync
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         FieldInfo heroCtrlField = type.GetField("heroCtrl",
             BindingFlags.NonPublic | BindingFlags.Instance)!;
-        
+
         if (audioPrefabField.GetValue(newAudioCtrl) == null) return false;
         if (runStartClipsField.GetValue(newAudioCtrl) == null) return false;
         if (runStartClipsCloaklessField.GetValue(newAudioCtrl) == null) return false;
@@ -684,7 +769,7 @@ internal class AudioSync : Sync
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         FieldInfo heroCtrlField = type.GetField("heroCtrl",
             BindingFlags.NonPublic | BindingFlags.Instance)!;
-        
+
         if (audioPrefabField.GetValue(HeroController.instance.AudioCtrl) == null) return false;
         if (runStartClipsField.GetValue(HeroController.instance.AudioCtrl) == null) return false;
         if (runStartClipsCloaklessField.GetValue(HeroController.instance.AudioCtrl) == null) return false;
@@ -694,12 +779,12 @@ internal class AudioSync : Sync
         runStartClipsField.SetValue(newAudioCtrl, runStartClipsField.GetValue(HeroController.instance.AudioCtrl));
         runStartClipsCloaklessField.SetValue(newAudioCtrl, runStartClipsCloaklessField.GetValue(HeroController.instance.AudioCtrl));
         heroCtrlField.SetValue(newAudioCtrl, HeroController.instance);
-            
+
         if (audioPrefabField.GetValue(newAudioCtrl) == null) return false;
         if (runStartClipsField.GetValue(newAudioCtrl) == null) return false;
         if (runStartClipsCloaklessField.GetValue(newAudioCtrl) == null) return false;
         if (heroCtrlField.GetValue(newAudioCtrl) == null) return false;
-        
+
         return true;
     }
     public void SetUpAudioControllerForPlayer(string player)
@@ -729,7 +814,7 @@ internal class AudioSync : Sync
             GameObject audiosOG = _visualSync.cachedHornetObject.transform.Find("Sounds").gameObject;
             // Find player object to set parent
             if (!_visualSync.PlayerObjects.TryGetValue(player, out GameObject playerObject)) return;
-            
+
             // Destroy any old copies
             if (playerObject.transform.Find("SoundsHolder") != null)
             {
@@ -783,16 +868,16 @@ internal class AudioSync : Sync
             newAudioCtrl.walljump = audioClone.transform.Find("Walljump").GetComponent<AudioSource>();
 
             // OnConnect() sends the footstep table to everyone, also send a request of everyone's footstep table packet, makes sure it's all synced for everyone when a new player joins
-            SilklessAPI.SendPacket(new AudioFootstepsTableRequestPacket() { RequestedPlayer = player});
+            SilklessAPI.SendPacket(new AudioFootstepsTableRequestPacket() { RequestedPlayer = player });
             _tryRunOnConnect = true;
         }
-        catch(Exception e) { LogUtil.LogError(e); }
+        catch (Exception e) { LogUtil.LogError(e); }
 
     }
 
     private void OnAudioFootstepsTableRequestPacket(AudioFootstepsTableRequestPacket packet)
     {
-        if(SilklessAPI.GetId() == packet.RequestedPlayer)
+        if (SilklessAPI.GetId() == packet.RequestedPlayer)
         {
             _tryRunOnConnect = true;
         }
@@ -820,25 +905,26 @@ internal class AudioSync : Sync
             // All the sources here have same position so they can all use same pan and volume
             ApplyAudioSettings(HAC, volume, pan);
         }
-        foreach (AudioSource src in AdditionalSoundsPlaying)
+        foreach (AdditionSoundPlaying asp in AdditionalSoundsPlaying)
         {
-            if(!src)
+            if (!asp.Source)
             {
-                AdditionalSoundsPlaying.Remove(src);
+                AdditionalSoundsPlaying.Remove(asp);
                 return;
             }
-            Vector3 srcPos = src.transform.position;
+            asp.Source.enabled = _visualSync.PlayerObjects[asp.Key].gameObject.activeSelf;
+            Vector3 srcPos = asp.Source.transform.position;
             float dist = Vector3.Distance(listenerPos, srcPos);
 
             // Linear rolloff (1 at zero distance, 0 at maxDist)
             float volume = Mathf.Clamp01(1f - (dist / maxDist));
 
             // Stereo panning based on x pos
-            Vector3 dir = src.transform.position - listenerPos;
+            Vector3 dir = asp.Source.transform.position - listenerPos;
             float pan = Mathf.Clamp(dir.x / maxDist, -1f, 1f);
 
-            src.volume = volume;
-            src.panStereo = pan;
+            asp.Source.volume = volume;
+            asp.Source.panStereo = pan;
         }
     }
 
@@ -867,7 +953,7 @@ internal class AudioSync : Sync
 
         foreach (AudioSource src in sources)
         {
-            if(src == HAC.falling)
+            if (src == HAC.falling)
             {
                 // Current glitching idk
                 src.volume = 0;
@@ -1081,7 +1167,7 @@ internal class HeroAudioPatchSoftLanding
         try
         {
             if (__instance == null) return;
-            
+
             if (AudioSync.LastSoftLandingPacketTime + 0.3f > Time.timeSinceLevelLoad) return;
             AudioSync.LastSoftLandingPacketTime = Time.timeSinceLevelLoad;
             // ReSharper disable once ConstantNullCoalescingCondition
@@ -1095,7 +1181,7 @@ internal class HeroAudioPatchSoftLanding
         }
     }
 }
-[HarmonyPatch(typeof(RandomAudioClipTable), "ReportPlayed") ]
+[HarmonyPatch(typeof(RandomAudioClipTable), "ReportPlayed")]
 public static class RandomAudioClipTablePatch
 {
     // ReSharper disable once InconsistentNaming
@@ -1106,7 +1192,6 @@ public static class RandomAudioClipTablePatch
             // Small movement cloak??
             // TauntHornetVoice ??
             if (spawnedAudioSource == null) return;
-            LogUtil.LogInfo("AUDIOPLAY: " + __instance.name);
             // Use odd Z position as a key to not send packet for the newly spawned sound (gets stuck in loop if not)
             // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (spawnedAudioSource.transform.position.z == 0.0405f) return;
